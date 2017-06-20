@@ -2,8 +2,8 @@
 
 PAPILIO_LOADER=/opt/GadgetFactory/papilio-loader/programmer
 XILINX=/opt/Xilinx/14.7
-DATA2MEM=${XILINX}/ISE_DS/ISE/bin/lin/data2mem
-IMPACT=${XILINX}/ISE_DS/ISE/bin/lin/impact
+PATH  := "$(PATH):${XILINX}/ISE_DS/ISE/bin/lin"
+SHELL := env PATH=$(PATH) /bin/sh
 
 # Shouldn't need to make changes below this point
 
@@ -13,13 +13,13 @@ BMM_FILE=opc5system_bd.bmm
 build: opc5system.bit
 
 deploy: opc5system.bit
-	$(IMPACT) -batch deploy.batch
+	impact -batch deploy.batch
 
 program: opc5system.bit
-	$(IMPACT) -batch program.batch
+	impact -batch program.batch
 
 opc5system.bit: monitor.mem $(BIT_FILE)
-	$(DATA2MEM) -bm $(BMM_FILE) -bd monitor.mem -bt $(BIT_FILE) -o b opc5system.bit
+	data2mem -bm $(BMM_FILE) -bd monitor.mem -bt $(BIT_FILE) -o b opc5system.bit
 
 monitor.mem : ../../monitor.s
 	python ../../opc5lsasm.py ../../monitor.s monitor.hex
