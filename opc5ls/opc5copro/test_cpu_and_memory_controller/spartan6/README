@@ -38,7 +38,10 @@ ngdbuild    -dd _ngo  \
 
 
 if [ "$1" == "sx" ] ; then
-    smartxplorer ${project_name}.ngd -p ${target} -uc ../${project_name}.ucf -ra -wd smartXplorer
+    yes localhost | head -4 > hostlist
+    smartxplorer ${project_name}.ngd -p ${target} -l hostlist -uc ../${project_name}.ucf -ra -wd smartXplorer
+    rm -f hostlist
+#    smartxplorer ${project_name}.ngd -p ${target} -uc ../${project_name}.ucf -ra -wd smartXplorer
 else
     # Default options, map then place and route the selected device
     map -p $target \
