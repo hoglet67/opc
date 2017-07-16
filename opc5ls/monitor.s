@@ -6,8 +6,9 @@
 # (c) 2017 David Banks
 
 MACRO JSR( _address_)
-    mov     r13, pc, 0x0002
-    mov     pc,  r0, _address_
+    jsr     r13, r0, _address_
+#    mov     r13, pc, 0x0002
+#    mov     pc,  r0, _address_
 ENDMACRO
 
 MACRO RTS()
@@ -265,10 +266,27 @@ dis_loop:
 # Local registers:
 # r5 is the source register number
 # r6 is the destination register number
-# r7 is the patched source register
-# r8 is the patched destination register
+# r7 is the eumlated source register
+# r8 is the emulated destination register
 # r9 is the emulated flags
 # r10 is the iteration count
+#
+# TODO: for latest xp2
+#
+# - bugfix (also in previous versions)
+#     - need to clear "r0" in reg_state before each instruction, as this can get corrupted
+#        
+# - support JSR rlink, rs, immed
+#     - r15 is now implied
+# - support INC/DEC rd, imm
+#     - somehow handle 4-bit imm instead of rs
+# - support halt (???)
+#     - emulator only, so should work as a NOP
+# - support PUTPSR and GETPSR (not setting SWI)
+#     - "psr" is now r0
+#     - but we re-write       
+# - support SWI and RTI (???)
+#     - need to emulate the shadow PC/shadow PSR
 
 step:
     mov     r10, r5, 1             # iteration count + 1
@@ -302,8 +320,8 @@ step_loop:
     mov     pc, r0, store_operand
 
 no_operand:
-    mov     r1, r0, 0x2200         # operand slot is filled with a nop
-                                   #   0.and   r0, r0
+    ld      r1, r0, nop            # operand slot is filled with a nop
+        
 store_operand:
     sto     r1, r0, operand        # store the operand
 
@@ -314,7 +332,7 @@ store_operand:
     ld      r8, r6, reg_state      # load the dst register value
     ld      r9, r0, reg_state_psr  # load the s (bit 2), c (bit 1) and z (bit 0) flags
 
-    psr     psr, r9                # load the flags
+    putpsr  psr, r9                # load the flags
 
 instruction:
     WORD    0x0000                 # emulated instruction patched here
@@ -322,7 +340,7 @@ instruction:
 operand:
     WORD    0x0000                 # emulated opcode patched here
 
-    psr     r9, psr                # save the flags
+    getpsr  r9, psr                # save the flags
 
     cmp     r6, r0, 15             # was the destination register r15
     nz.sto  r9, r0, reg_state_psr  # no, then save the flags
@@ -338,6 +356,9 @@ operand:
 
     mov     pc, r0, mon1           # back to the - prompt
 
+nop:
+    z.and   r0, r0
+        
 regs:
     JSR     (osnewl)
     JSR     (print_regs)
@@ -690,6 +711,11 @@ dis4:
     mov     r2, r6
     and     r2, r0, 0x0F00              # extract opcode
 
+    mov     r1, r6
+    and     r1, r0, 0xE000
+    cmp     r1, r0, 0x2000
+    z.add   r2, r0, 0x1000
+        
     mov     r1, r0, opcodes             # find string for opcode
 
 dis5:
@@ -779,7 +805,7 @@ predicates:       # Each predicate must be 2 words, zero terminated
     WORD 0x0000
     WORD 0x0000
 
-    BSTRING "0."
+    WORD 0x0000
     WORD 0x0000
 
     BSTRING "z."
@@ -802,39 +828,71 @@ four_spaces:
     WORD    0x0000
 
 opcodes:    # Each opcode must be 3 words, zero terminated
-    BSTRING "mov"    #  0000
+    BSTRING "mov"    #  00000
     WORD    0x0000
-    BSTRING "and"    #  0001
+    BSTRING "and"    #  00001
     WORD    0x0000
-    BSTRING "or"     #  0010
+    BSTRING "or"     #  00010
     WORD    0x0000, 0x0000
-    BSTRING "xor"    #  0011
+    BSTRING "xor"    #  00011
     WORD    0x0000
-    BSTRING "add"    #  0100
+    BSTRING "add"    #  00100
     WORD    0x0000
-    BSTRING "adc"    #  0101
+    BSTRING "adc"    #  00101
     WORD    0x0000
-    BSTRING "sto"    #  0110
+    BSTRING "sto"    #  00110
     WORD    0x0000
-    BSTRING "ld"     #  0111
+    BSTRING "ld"     #  00111
     WORD    0x0000, 0x0000
-    BSTRING "ror"    #  1000
+    BSTRING "ror"    #  01000
     WORD    0x0000
-    BSTRING "not"    #  1001
+    BSTRING "jsr"    #  01001
     WORD    0x0000
-    BSTRING "sub"    #  1010
+    BSTRING "sub"    #  01010
     WORD    0x0000
-    BSTRING "sbc"    #  1011
+    BSTRING "sbc"    #  01011
     WORD    0x0000
-    BSTRING "cmp"    #  1100
+    BSTRING "inc"    #  01100
     WORD    0x0000
-    BSTRING "cmpc"   #  1101
+    BSTRING "lsr"    #  01101
     WORD    0x0000
-    BSTRING "bswp"   #  1110
+    BSTRING "dec"    #  01110
     WORD    0x0000
-    BSTRING "psr"    #  1111
+    BSTRING "asr"    #  01111
     WORD    0x0000
-
+    BSTRING "halt"   #  10000
+    WORD    0x0000
+    BSTRING "bswp"   #  10001
+    WORD    0x0000
+    BSTRING "putp"   #  10010
+    WORD    0x0000
+    BSTRING "getp"   #  10011
+    WORD    0x0000
+    BSTRING "rti"    #  10100
+    WORD    0x0000
+    BSTRING "not"    #  10101
+    WORD    0x0000
+    BSTRING "out"    #  10110
+    WORD    0x0000
+    BSTRING "in"     #  10111
+    WORD    0x0000, 0x0000
+    BSTRING "----"   #  11000
+    WORD    0x0000
+    BSTRING "----"   #  11001
+    WORD    0x0000
+    BSTRING "cmp"    #  11010
+    WORD    0x0000
+    BSTRING "cmpc"   #  11011
+    WORD    0x0000
+    BSTRING "----"   #  11100
+    WORD    0x0000
+    BSTRING "----"   #  11101
+    WORD    0x0000
+    BSTRING "----"   #  11110
+    WORD    0x0000
+    BSTRING "----"   #  11111
+    WORD    0x0000
+        
 reg_state:
     WORD 0x0000
 reg_state_r1:
