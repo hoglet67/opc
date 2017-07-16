@@ -2,9 +2,10 @@ module cpu_and_memory_controller
   (
    input         clk,
    input         reset_b,
-   input         int_b,
+   input [1:0]   int_b,
    output        vpa,
    output        vda, 
+   output        vio, 
 
    // Ram Signals
    output        ram_cs_b,
@@ -38,7 +39,8 @@ module cpu_and_memory_controller
       .int_b      (int_b),
       .clken      (cpu_clken),
       .vpa        (vpa),
-      .vda        (vda)
+      .vda        (vda),
+      .vio        (vio)
     );
 
    memory_controller inst_memory_controller
