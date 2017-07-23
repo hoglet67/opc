@@ -301,11 +301,8 @@ dis_loop:
 # r9 is the saved pc value, and then the emulated flags
 # r10 is the iteration count
 #
-# TODO: for OPC6
+# TODO:
 #
-# - support PUTPSR and GETPSR (not setting SWI)
-#     - "psr" should be r0
-#     - but we re-write src/dst so need to check if values other than r0 are ok
 # - support SWI and RTI (???)
 #     - need to emulate the shadow PC/shadow PSR
 
@@ -378,12 +375,21 @@ not_jsr:
 
 ##endif
 
+    cmp     r5, r0                 # skip the src rewrite if r0 - necessary for GETPSR to work
+    z.mov   pc, r0, skip_src_rewrite
+
     and     r1, r0, 0xff0f         # patch the instruction so:
     or      r1, r0, 0x0070         # src = r7
 
 skip_src_rewrite:
+
+    cmp     r6, r0                 # skip the dst rewrite if r0 - necessary for PUTPSR to work
+    z.mov   pc, r0, skip_dst_rewrite
+
     and     r1, r0, 0xfff0         # patch the instruction so:
     or      r1, r0, 0x0008         # dst = r8
+
+skip_dst_rewrite:
 
     sto     r1, r0, instruction    # write the patched instruction
 
