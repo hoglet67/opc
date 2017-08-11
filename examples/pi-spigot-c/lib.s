@@ -1,11 +1,3 @@
-MACRO   ASL( _reg_)
-        add _reg_,_reg_
-ENDMACRO
-
-MACRO   ROL( _reg_)
-        adc _reg_,_reg_
-ENDMACRO
-
 MACRO   PUSH( _data_, _ptr_)
         push    _data_, _ptr_
 ENDMACRO
@@ -17,6 +9,14 @@ MACRO   PUSH4( _d0_,_d1_,_d2_,_d3_, _ptr_)
         push     _d3_,_ptr_
 ENDMACRO
 
+MACRO   PUSH5( _d0_,_d1_,_d2_,_d3_, _d4_, _ptr_)
+        push     _d0_,_ptr_
+        push     _d1_,_ptr_
+        push     _d2_,_ptr_
+        push     _d3_,_ptr_
+        push     _d4_,_ptr_
+ENDMACRO
+        
 MACRO   POP( _data_, _ptr_)
         pop  _data_, _ptr_
 ENDMACRO
@@ -28,6 +28,14 @@ MACRO   POP4( _d0_,_d1_,_d2_,_d3_, _ptr_)
         pop      _d0_, _ptr_
 ENDMACRO
 
+MACRO   POP5( _d0_,_d1_,_d2_,_d3_, _d4_, _ptr_)
+        pop      _d4_, _ptr_
+        pop      _d3_, _ptr_
+        pop      _d2_, _ptr_
+        pop      _d1_, _ptr_
+        pop      _d0_, _ptr_
+ENDMACRO
+        
 MACRO   CLC()
         c.add r0,r0
 ENDMACRO
@@ -36,18 +44,17 @@ MACRO   SEC()
         nc.dec r0,1
 ENDMACRO
 
-MACRO   ROL( _reg_ )
-        adc   _reg_, _reg_
-ENDMACRO
-MACRO   LSL( _reg_ )
-        add   _reg_, _reg_
+MACRO   ASL( _reg_)
+        add _reg_,_reg_
 ENDMACRO
 
-
+MACRO   ROL( _reg_)
+        adc _reg_,_reg_
+ENDMACRO
 
 # --------------------------------------------------------------
 #
-# mul16
+# __mul16
 #
 # Multiply 2 16 bit numbers to yield a 32b result
 #
@@ -57,8 +64,7 @@ ENDMACRO
 #       r13   holds return address
 #       r14   is global stack pointer
 # Exit
-#       r6    upwards preserved
-#       r3,r5 uses as workspace registers and trashed
+#       r3    upwards preserved
 #       r1,r2 holds 32b result (LSB in r1)
 #
 #
@@ -95,7 +101,7 @@ mulstep16:
 
 # --------------------------------------------------------------
 #
-# udiv16
+# __mod
 #
 # Divide a 16 bit number by a 16 bit number to yield a 16 b quotient and
 # remainder
@@ -106,17 +112,34 @@ mulstep16:
 # - r13 holds return address
 # - r14 is global stack pointer
 # Exit
-# - r6  upwards preserved
-# - r3-5 trashed
-# - r2 = quotient
+# - r3  upwards preserved
 # - r1 = remainder
 # --------------------------------------------------------------
+
 __mod:
     PUSH    (r13, r14)
     jsr     r13, r0, divmod
     mov     r1, r2
     POP     (r13, r14)
     mov     pc, r13 
+
+# --------------------------------------------------------------
+#
+# __div
+#
+# Divide a 16 bit number by a 16 bit number to yield a 16 b quotient and
+# remainder
+#
+# Entry:
+# - r1 16 bit dividend (A)
+# - r2 16 bit divisor (B)
+# - r13 holds return address
+# - r14 is global stack pointer
+# Exit
+# - r3  upwards preserved
+# - r1 = quotient
+# - r2 = remainder
+# --------------------------------------------------------------
 
 __div:
         
@@ -142,54 +165,46 @@ udiv16_loop:
     POP     (r3, r14)
     mov     pc,r13                  # and return with quotient/remainder in r1/r2
 
-        # --------------------------------------------------------------
-        #
-        # multiply32
-        #
-        # Entry:
-        #       r1 points to block of two bytes holding 32 bit multiplier (A), LSB in lowest byte
-        #       r2 points to block of two bytes holding 32 bit multiplicand (B), LSB in lowest byte
-        #       r3 points to area of memory large enough to take the 4 byte result
-        #       r13 holds return address
-        #       (r14 is global stack pointer)
-        # Exit
-        #       r1..9 uses as workspace registers and trashed
-        #       Result written to memory (see above)
-        # --------------------------------------------------------------
-x__mul32:
-        PUSH    (r3, r14)
+# --------------------------------------------------------------
+#
+# __mul32
+#
+# Entry:
+#       r1, r2 hold 32 bit multiplier (A), LSB in r1
+#       r3, r4 hold 32 bit multiplicand (B), LSB in r3
+#       r13 holds return address
+#       (r14 is global stack pointer)
+# Exit
+#       r1, r2, r3, r4 hold 64-bit result of A * B
+# --------------------------------------------------------------
         
-        ld      r8, r2, 1       # Get B into r7,r8 (pre-shifted)
-        ld      r7, r2
-        mov    r6, r0
-        mov    r5, r0
-        mov    r4, r0          # Get A into r1..r4
-        mov    r3, r0
-        ld      r2, r1, 1
-        ld      r1, r1
-        mov    r9, r0,-32      # Setup a loop counter
+__mul32:
+        PUSH5   (r5, r6, r7, r8, r9, r14)
+        mov     r8, r4            # Get B into r7,r8 (pre-shifted)
+        mov     r7, r3
+        mov     r6, r0
+        mov     r5, r0
+        mov     r4, r0            # Get A into r1..r4
+        mov     r3, r0
+        mov     r9, r0,-32        # Setup a loop counter
 mulstep32:
-        lsr   r4,r4
-        ror   r3,r3
-        ror   r2,r2
-        ror   r1,r1
-        nc.inc pc,mcont-PC
-        add   r1,r5
-        adc   r2,r6
-        adc   r3,r7
-        adc   r4,r8
-mcont:  inc   r9,1                  # increment counter
-        nz.dec pc,PC-mulstep32      # next iteration if not zero
-        lsr   r4,r4
-        ror   r3,r3
-        ror   r2,r2
-        ror   r1,r1
-        POP     (r5, r14)
-        sto     r1,r5,0         # save results
-        sto     r2,r5,1
-        sto     r3,r5,2
-        sto     r4,r5,3
-        mov    pc,r13          # and return
+        lsr     r4, r4
+        ror     r3, r3
+        ror     r2, r2
+        ror     r1, r1
+        nc.inc  pc, mcont-PC
+        add     r1, r5
+        adc     r2, r6
+        adc     r3, r7
+        adc     r4, r8
+mcont:  inc     r9, 1             # increment counter
+        nz.dec  pc, PC-mulstep32  # next iteration if not zero
+        lsr     r4, r4
+        ror     r3, r3
+        ror     r2, r2
+        ror     r1, r1
+        POP5    (r5, r6, r7, r8, r9, r14)
+        mov     pc, r13           # and return
 
 # --------------------------------------------------------------
 #
@@ -209,7 +224,8 @@ mcont:  inc   r9,1                  # increment counter
 # - Result written to memory (see above)
 # --------------------------------------------------------------
 
-x__div32:
+__mod32:
+__div32:
         PUSH    (r13, r14)      # save return address
         PUSH    (r10, r14)   
         PUSH    (r3, r14)      
@@ -225,7 +241,7 @@ x__div32:
         mov    r10, r0,-32          # Setup a loop counter
 udiv32_loop:
         # shift left the quotient/dividend
-        LSL(r2)
+        ASL(r2)
         ROL(r3)
         ROL(r4)
         ROL(r5)
