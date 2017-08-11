@@ -5,6 +5,8 @@
 
 #define INT int
 
+// #define TRACK_MAX
+
 void init() {
    asm  {
       ORG 0x100
@@ -47,12 +49,22 @@ void pi_digits() {
 
    nines = 0;
    predigit = 0;
+#ifdef TRACK_MAX
+   int max = 0;
+   int maxi = 0;
+#endif
    for (j = 0; j <= numdig; j++)
    {
       q = 0;
       for (i = len; i > 0; i--)
       {
          x = 10 * pi[i]+ q * i;
+#ifdef TRACK_MAX
+         if (x > max) {
+            max = x;
+            maxi = i;
+         }
+#endif
          pi[i] = x % (2 * i - 1);
          q = x / (2 * i - 1);
       }
@@ -84,6 +96,9 @@ void pi_digits() {
    putchar(predigit + '0');
    putchar(10);
    putchar(13);
+#ifdef TRACK_MAX
+   printf("Max = %d at %d\r\n", max, maxi);
+#endif
 }
 
 
