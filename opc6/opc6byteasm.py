@@ -49,10 +49,12 @@ for iteration in range (0,2): # Two pass assembly
             if mobj.groupdict()["table"]=="B":
                 errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
                 exec ("%s= %s" % ((label,str(nextbyte)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
-            else:
-                check_alignment("word label",error=True)
-                errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (label,line.strip())]) if label in symtab else errors
-                exec ("%s= %s" % ((label,str((nextbyte+1)//2)) if label!= None else (opfields[0], opfields[1])), globals(), symtab )
+            elif iteration ==0 : # all symbols defined on pass 0
+                if inst != "EQU":
+                    check_alignment("word label",error=True)
+                (symbol, value) = (label,str((nextbyte+1)//2))  if inst != "EQU" else (opfields[0], opfields[1])
+                errors = (errors + ["Error: Symbol %16s redefined in ...\n         %s" % (symbol,line.strip())]) if symbol in symtab else errors
+                exec ("%s= %s" % (symbol,value), globals(), symtab )
         if (inst=="ALIGN"):
             if not check_alignment(inst,error=False):
                 nextbyte+=1
@@ -86,14 +88,14 @@ for iteration in range (0,2): # Two pass assembly
                 try:
                     nextword = (nextbyte+1)//2
                     exec("PC=%d+%d" % (nextword,len(opfields)-1), globals(), symtab) # calculate PC as it will be in EXEC state
-                    exec("_BPC_=%d+%d" % (nextbyte,len(opfields)-1), globals(), symtab) # calculate Byte PC for VM
+                    exec("_BPC_=%d" % (nextbyte), globals(), symtab) # calculate Byte PC for VM as current position
                     words = [eval( f,globals(), symtab) for f in opfields ]
                 except (ValueError, NameError, TypeError,SyntaxError):
                     (words,errors)=([0]*3,errors+["Error: illegal or undefined register name or expression in ...\n         %s" % line.strip() ])
                 if inst in op:
                     (dst,src,val,abs_src) = (words+[0])[:3] + [words[1] if words[1]>0 else -words[1]]
                     errors=(errors+["Error: short constant out of range in ...\n         %s"%(line.strip())]) if (inst in('inc','dec') and (abs_src>0xF)) else errors
-                    (inst,src) = ( 'dec',(~src +1)&0xF) if inst=='inc' and (src&0x8000) else (inst,src) #spot increment with negative immediate and swap to dec
+                    (inst,src) = ('dec' if inst=='inc' else 'inc',(~src +1)&0xF) if inst in('inc','dec') and (src&0x8000) else (inst,src) 
                     check_alignment(inst)
                     bytes = [(src<<4)|dst]
                     bytes.append(((len(words)==3)<<4)|(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x20)|((op.index(inst)&0x0F)))
@@ -132,3 +134,4 @@ with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write t
             if ( bytenum + i < len(bytemem)):
                 words.append(  "%04x " % (bytemem[i+bytenum] + 256*bytemem[i+1+bytenum]))
         f.write( (''.join(words))+'\n')
+sys.exit( len(errors)>0)

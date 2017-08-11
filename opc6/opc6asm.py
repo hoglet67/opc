@@ -52,7 +52,7 @@ for iteration in range (0,2): # Two pass assembly
                 if inst in op:
                     (dst,src,val,abs_src) = (words+[0])[:3] + [words[1] if words[1]>0 else -words[1]]
                     errors=(errors+["Error: short constant out of range in ...\n         %s"%(line.strip())]) if (inst in('inc','dec') and (abs_src>0xF)) else errors
-                    (inst,src) = ( 'dec',(~src +1)&0xF) if inst=='inc' and (src&0x8000) else (inst,src) #spot increment with negative immediate and swap to dec
+                    (inst,src) = ('dec' if inst=='inc' else 'inc',(~src +1)&0xF) if inst in('inc','dec') and (src&0x8000) else (inst,src) 
                     words=[((len(words)==3)<<12)|(pdict[pred] if ((op.index(inst)&0x10)==0) else 0x2000)|((op.index(inst)&0x0F)<<8)|(src<<4)|dst,val&0xFFFF][:len(words)-(len(words)==2)]
             (wordmem[nextmem:nextmem+len(words)], nextmem,wcount )  = (words, nextmem+len(words),wcount+len(words))
         elif inst == "ORG":
@@ -65,3 +65,4 @@ print ("\nAssembled %d words of code with %d error%s and %d warning%s." % (wcoun
 print ("\nSymbol Table:\n\n%s\n\n%s\n%s" % ('\n'.join(["%-32s 0x%04X (%06d)" % (k,v,v) for k,v in sorted(symtab.items()) if not re.match("r\d*|pc|psr",k)]),'\n'.join(errors),'\n'.join(warnings)))
 with open("/dev/null" if len(errors)>0 else sys.argv[2],"w" ) as f:   ## write to hex file only if no errors else send result to null file
     f.write( '\n'.join([''.join("%04x " % d for d in wordmem[j:j+24]) for j in [i for i in range(0,len(wordmem),24)]]))
+sys.exit( len(errors)>0)
