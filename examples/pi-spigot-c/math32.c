@@ -26,9 +26,21 @@ void main() {
       putchar('x');
    }
 
-//   d = a / b;
+   d = a / b;
 
-//   e = a % b;
+   if (d == 100) {
+      putchar('.');
+   } else {
+      putchar('x');
+   }
+
+   e = a % b;
+
+   if (e == 56) {
+      putchar('.');
+   } else {
+      putchar('x');
+   }
 
    putchar(10);
    putchar(13);
