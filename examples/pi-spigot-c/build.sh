@@ -9,10 +9,10 @@ rm -f *~ ${PROG}.bin ${PROG}.c.xml  ${PROG}.fpp  ${PROG}.hex  ${PROG}.lis  ${PRO
 ./c64 ${PROG}.c
 
 # Patch the assember to fix some buhs
-sed -e "s/push.*/&,r14/g" -i ${PROG}.s
-sed -e "s/pop.*/&,r14/g"  -i ${PROG}.s
-sed -e "s/word/WORD/g"    -i ${PROG}.s
-sed -r "s/align/#align/g" -i ${PROG}.s
+#sed -e "s/push.*/&,r14/g" -i ${PROG}.s
+#sed -e "s/pop.*/&,r14/g"  -i ${PROG}.s
+#sed -e "s/word/WORD/g"    -i ${PROG}.s
+#sed -r "s/align/#align/g" -i ${PROG}.s
 
 # Assemble
 cat ${PROG}.s lib.s > tmp.s

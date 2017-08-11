@@ -40,14 +40,15 @@ void pi_digits() {
    
    for (x = len; x > 0; x--) {
       pi[x] = 2;
-      pi[x] = 2; pi[x] = 2; pi[x] = 2; pi[x] = 2; pi[x] = 2; pi[x] = 2; // // padding so loop > 16
    }
+
+   putchar('3');
+   putchar('.');
 
    nines = 0;
    predigit = 0;
    for (j = 0; j <= numdig; j++)
    {
-      dummy = 0x1234;
       q = 0;
       for (i = len; i > 0; i--)
       {
@@ -65,9 +66,6 @@ void pi_digits() {
          {
             putchar('0');
             nines--;
-            nines++;nines--; // padding so loop > 16
-            nines++;nines--; // padding so loop > 16
-            nines++;nines--; // padding so loop > 16
          }
          predigit = 0;
       }
@@ -79,14 +77,13 @@ void pi_digits() {
          {
             putchar('9');
             nines--;
-            nines++;nines--; // padding so loop > 16
-            nines++;nines--; // padding so loop > 16
-            nines++;nines--; // padding so loop > 16
          }
          predigit = q;
       }
    }
    putchar(predigit + '0');
+   putchar(10);
+   putchar(13);
 }
 
 
