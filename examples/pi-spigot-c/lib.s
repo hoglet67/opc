@@ -74,6 +74,18 @@ MACRO   ROL( _reg_)
         adc _reg_,_reg_
 ENDMACRO
 
+MACRO   NEG( _reg_)
+        not _reg_,_reg_
+        inc _reg_, 1
+ENDMACRO
+
+MACRO   NEG2( _regmsw_, _reglsw_)
+        not _reglsw_,_reglsw_
+        not _regmsw_,_regmsw_
+        inc _reglsw_, 1
+        adc _regmsw_, r0
+ENDMACRO
+
 # --------------------------------------------------------------
 #
 # __mulu
@@ -307,6 +319,53 @@ udiv32_next:
 # __mod32
 #
 # TODO
+
+MACRO SW16 ( _sub_ )
+      PUSH2   (r13, r5, r14)
+      mov     r5, r0         # keep track of signs
+      add     r1, r0
+      pl.inc  pc, l1_@ - PC
+      NEG     (r1)
+      inc     r5, 1
+l1_@:
+      add     r2, r0
+      pl.inc  pc, l2_@ - PC
+      NEG     (r2)
+      dec     r5, 1
+l2_@:
+      jsr     r13, r0, _sub_
+      cmp     r5, r0
+      z.inc   pc, l3_@ - PC
+      NEG2    (r2, r1)
+l3_@:
+      POP2    (r13, r5, r14)
+      mov     pc, r13
+ENDMACRO
+
+
+MACRO SW32 ( _sub_ )
+      PUSH2   (r13, r5, r14)
+      mov     r5, r0         # keep track of signs
+      add     r2, r0
+      pl.inc  pc, l1_@ - PC
+      NEG2    (r2, r1)
+      inc     r5, 1
+l1_@:
+      add     r4, r0
+      pl.inc  pc, l2_@ - PC
+      NEG2    (r4, r3)
+      dec     r5, 1
+l2_@:
+      jsr     r13, r0, _sub_
+      cmp     r5, r0
+      z.inc   pc, l3_@ - PC
+      NEG2    (r2, r1)
+l3_@:
+      POP2    (r13, r5, r14)
+      mov     pc, r13
+ENDMACRO
+
+
 
 __mul:
       mov r15, r0, __mulu
