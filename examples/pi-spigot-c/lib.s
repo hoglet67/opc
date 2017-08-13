@@ -194,7 +194,7 @@ udiv16_loop:
 
 # --------------------------------------------------------------
 #
-# __mul32u
+# __mulu32
 #
 # Entry:
 #       r1, r2 hold 32 bit multiplier (A), LSB in r1
@@ -205,7 +205,7 @@ udiv16_loop:
 #       r1, r2, r3, r4 hold 64-bit result of A * B
 # --------------------------------------------------------------
 
-__mul32u:
+__mulu32:
         PUSH5   (r5, r6, r7, r8, r9, r14)
         mov     r8, r4              # Get B into r7,r8 (pre-shifted)
         mov     r7, r3
@@ -235,7 +235,7 @@ mcont:  inc     r9, 1               # increment counter
 
 # --------------------------------------------------------------
 #
-# __mod32u
+# __modu32
 #
 # Divide a 32 bit number by a 32 bit number to yield a 32 b quotient and
 # remainder
@@ -251,7 +251,7 @@ mcont:  inc     r9, 1               # increment counter
 # - r3,4 = trashed
 # --------------------------------------------------------------
 
-__mod32u:
+__modu32:
         PUSH    (r13, r14)
         jsr     r13, r0, divmod32
         mov     r1, r3
@@ -261,7 +261,7 @@ __mod32u:
 
 # --------------------------------------------------------------
 #
-# __div32u
+# __divu32
 #
 # Divide a 32 bit number by a 32 bit number to yield a 32 b quotient and
 # remainder
@@ -277,7 +277,7 @@ __mod32u:
 # - r3,4 = remainder
 # --------------------------------------------------------------
 
-__div32u:
+__divu32:
 
 divmod32:
         PUSH3   (r5, r6, r7, r14)
@@ -318,9 +318,14 @@ udiv32_next:
 # __div32
 # __mod32
 #
-# TODO
+# For mul and div, the sign of the result depends on the sign of both arguments
+# - the A for of the wrapper achieves this
 
-MACRO SW16 ( _sub_ )
+# For mod, the sign of the result depends only on the sign of the first arguments
+# - the B for of the wrapper achieves this
+#
+
+MACRO SW16A ( _sub_ )
       PUSH2   (r13, r5, r14)
       mov     r5, r0         # keep track of signs
       add     r1, r0
@@ -343,7 +348,7 @@ l3_@:
 ENDMACRO
 
 
-MACRO SW32 ( _sub_ )
+MACRO SW32A ( _sub_ )
       PUSH2   (r13, r5, r14)
       mov     r5, r0         # keep track of signs
       add     r2, r0
@@ -365,22 +370,65 @@ l3_@:
       mov     pc, r13
 ENDMACRO
 
+MACRO SW16B ( _sub_ )
+      PUSH2   (r13, r5, r14)
+      mov     r5, r0         # keep track of signs
+      add     r1, r0
+      pl.inc  pc, l1_@ - PC
+      NEG     (r1)
+      inc     r5, 1
+l1_@:
+      add     r2, r0
+      pl.inc  pc, l2_@ - PC
+      NEG     (r2)
+#     dec     r5, 1          # the second arg sign has no impact on the result sign
+l2_@:
+      jsr     r13, r0, _sub_
+      cmp     r5, r0
+      z.inc   pc, l3_@ - PC
+      NEG2    (r2, r1)
+l3_@:
+      POP2    (r13, r5, r14)
+      mov     pc, r13
+ENDMACRO
 
+
+MACRO SW32B ( _sub_ )
+      PUSH2   (r13, r5, r14)
+      mov     r5, r0         # keep track of signs
+      add     r2, r0
+      pl.inc  pc, l1_@ - PC
+      NEG2    (r2, r1)
+      inc     r5, 1
+l1_@:
+      add     r4, r0
+      pl.inc  pc, l2_@ - PC
+      NEG2    (r4, r3)
+#     dec     r5, 1          # the second arg sign has no impact on the result sign
+l2_@:
+      jsr     r13, r0, _sub_
+      cmp     r5, r0
+      z.inc   pc, l3_@ - PC
+      NEG2    (r2, r1)
+l3_@:
+      POP2    (r13, r5, r14)
+      mov     pc, r13
+ENDMACRO
 
 __mul:
-      mov r15, r0, __mulu
+      SR16A(__mulu)
 
 __div:
-      mov r15, r0, __divu
+      SR16A(__divu)
 
 __mod:
-      mov r15, r0, __modu
+      SR16B(__modu)
 
 __mul32:
-      mov r15, r0, __mul32u
+      SR32A(__mulu32)
 
 __div32:
-      mov r15, r0, __div32u
+      SR32A(__divu32)
 
 __mod32:
-      mov r15, r0, __mod32u
+      SR32B(__modu32)

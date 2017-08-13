@@ -32,7 +32,6 @@ void decimal_out(INT i) {
 
 void pi_digits() {
 
-   INT dummy;
    INT i, j, k, nines, predigit;
    INT q, x, numdig, len;
    INT pi[DIGITS*10/3 + 1];
