@@ -416,19 +416,19 @@ l3_@:
 ENDMACRO
 
 __mul:
-      SR16A(__mulu)
+      SW16A(__mulu)
 
 __div:
-      SR16A(__divu)
+      SW16A(__divu)
 
 __mod:
-      SR16B(__modu)
+      SW16B(__modu)
 
 __mul32:
-      SR32A(__mulu32)
+      SW32A(__mulu32)
 
 __div32:
-      SR32A(__divu32)
+      SW32A(__divu32)
 
 __mod32:
-      SR32B(__modu32)
+      SW32B(__modu32)
