@@ -1,6 +1,11 @@
 #!/bin/bash
 
-PROG=pi
+PROG=$1
+
+if [[ -z $PROG ]]; then
+    PROG=pi
+fi
+
 
 # Clean up
 rm -f *~ ${PROG}.bin ${PROG}.c.xml  ${PROG}.fpp  ${PROG}.hex  ${PROG}.lis  ${PROG}.s
@@ -19,7 +24,7 @@ cat ${PROG}.s lib.s > tmp.s
 python ../../opc6/opc6asm.py tmp.s ${PROG}.hex
 
 # Hex to binary
-xxd -r -p < ${PROG}.hex | dd status=none conv=swab ibs=2 skip=$((16#0100)) count=$((16#0300)) > ${PROG}.bin
+xxd -r -p < ${PROG}.hex | dd status=none conv=swab ibs=2 skip=$((16#0100)) count=$((16#0400)) > ${PROG}.bin
 
 # Generare srecords
 srec_cat ${PROG}.bin -Binary --offset 0x100 | grep S1
