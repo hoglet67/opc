@@ -114,30 +114,33 @@ system
    always
      #5 clk = !clk;
 
-   always @(posedge DUT.clk)
-     if (DUT.vpa) begin
-        $display("%t:  Fetch: %04x = %02x", $time, DUT.address, DUT.cpu_din);
-     end else if (DUT.vda) begin
-        if (DUT.rnw)
-          $display("%t: Mem Rd: %04x = %02x", $time, DUT.address, DUT.cpu_din);
-        else
-          $display("%t: Mem Wr: %04x = %02x", $time, DUT.address, DUT.cpu_dout);
-     end else if (DUT.vio) begin
-        if (DUT.rnw)
-          $display("%t:  IO Rd: %04x = %02x", $time, DUT.address, DUT.cpu_din);
-        else
-          $display("%t:  IO Wr: %04x = %02x", $time, DUT.address, DUT.cpu_dout);
+   always @(posedge DUT.clk100)
+     if (DUT.cpuclken) begin
+        if (DUT.vpa) begin
+           $display("%t:  Fetch: %05x = %08x", $time, DUT.address, DUT.cpu_din);
+        end else if (DUT.vda) begin
+           if (DUT.rnw)
+             $display("%t: Mem Rd: %05x = %08x", $time, DUT.address, DUT.cpu_din);
+           else
+             $display("%t: Mem Wr: %05x = %08x", $time, DUT.address, DUT.cpu_dout);
+        end else if (DUT.vio) begin
+           if (DUT.rnw)
+             $display("%t:  IO Rd: %05x = %08x", $time, DUT.address, DUT.cpu_din);
+           else
+             $display("%t:  IO Wr: %05x = %08x", $time, DUT.address, DUT.cpu_dout);
+        end
+     end // if (DUT.cpuclken)
+   
+   always @(posedge DUT.clk100)
+     if (DUT.cpuclken) begin
+        if (DUT.vda && !DUT.rnw && DUT.address[15:0] == 16'hfe09)
+          if (DUT.cpu_dout == 10)
+            $display("%t: UART Tx:  <lf>", $time);
+          else if (DUT.cpu_dout == 13)
+            $display("%t: UART Tx:  <cr>", $time);
+          else
+            $display("%t: UART Tx:  %s", $time, DUT.cpu_dout);
      end
-
-   always @(posedge DUT.clk)
-     if (DUT.vda && !DUT.rnw && DUT.address[15:0] == 16'hfe09)
-       if (DUT.cpu_dout == 10)
-         $display("%t: UART Tx:  <lf>", $time);
-       else if (DUT.cpu_dout == 13)
-         $display("%t: UART Tx:  <cr>", $time);
-       else
-         $display("%t: UART Tx:  %s", $time, DUT.cpu_dout);
-
    assign data = (!ramcs_b && !ramoe_b && ramwe_b) ? data_out : 16'hZZZZ;
 
    // This seem a bit of a hack, but the memory write
@@ -147,7 +150,7 @@ system
    always @(posedge ramwe_b)
      if (ramcs_b == 1'b0) begin
         mem[addr] <= data_in;
-        $display("%t: Ram Wr: %04x = %02x", $time, addr, data_in);
+        $display("%t: Ram Wr: %05x = %04x", $time, addr, data_in);
      end
 
    always @(addr)

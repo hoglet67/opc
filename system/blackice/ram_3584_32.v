@@ -1,4 +1,4 @@
-module ram ( input [31:0] din, output [31:0] dout, input[11:0] address, input rnw, input clk, input cs_b);
+module ram ( input [31:0] din, output [31:0] dout, input[11:0] address, input rnw, input clk, input cs);
 
 `ifdef simulate
  parameter MEM_INIT_FILE = "monitor.mem";
@@ -16,7 +16,7 @@ module ram ( input [31:0] din, output [31:0] dout, input[11:0] address, input rn
    end
 
    always @(posedge clk)
-     if (!cs_b) begin
+     if (cs) begin
         if (!rnw)
           ram[address] <= din;
         dout <= ram[address];
