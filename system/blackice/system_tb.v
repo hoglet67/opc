@@ -114,7 +114,7 @@ system
    always
      #5 clk = !clk;
 
-   always @(posedge DUT.clk100)
+   always @(posedge DUT.clk)
      if (DUT.cpuclken) begin
         if (DUT.vpa) begin
            $display("%t:  Fetch: %05x = %08x", $time, DUT.address, DUT.cpu_din);
@@ -130,8 +130,8 @@ system
              $display("%t:  IO Wr: %05x = %08x", $time, DUT.address, DUT.cpu_dout);
         end
      end // if (DUT.cpuclken)
-   
-   always @(posedge DUT.clk100)
+
+   always @(posedge DUT.clk)
      if (DUT.cpuclken) begin
         if (DUT.vda && !DUT.rnw && DUT.address[15:0] == 16'hfe09)
           if (DUT.cpu_dout == 10)

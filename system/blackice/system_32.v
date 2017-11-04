@@ -19,7 +19,7 @@ module system (
                output        txd);
 
    // CLKSPEED is the main clock speed
-   parameter CLKSPEED = 33333333;
+   parameter CLKSPEED = 50000000;
 
    // BAUD is the desired serial baud rate
    parameter BAUD = 115200;
@@ -28,10 +28,6 @@ module system (
    parameter RAMSIZE = 12;
 
    // CPU signals
-   reg         cpuclken;
-   reg         ramclken;
-   reg         uartclken;
-   
    wire [31:0] cpu_din;
    wire [31:0] cpu_dout;
    wire [31:0] ram_dout;
@@ -81,25 +77,29 @@ module system (
    // Data Multiplexor
    assign cpu_din = uart_cs_b ? (ram_cs ? ram_dout : {16'b0, data_pins_in}) : {16'b0, uart_dout};
 
-   reg [1:0] clkdiv = 2'b00;  // divider
-   always @(posedge clk100)
-     begin
-        case (clkdiv)              
-          2'b00: clkdiv <= 2'b01;
-          2'b01: clkdiv <= 2'b10;
-          2'b10: clkdiv <= 2'b00;
-          2'b11: clkdiv <= 2'b00;
-        endcase // case (clkdiv)
-        cpuclken    <=  clkdiv == 2'b00;
-        ramclken    <=  clkdiv == 2'b10;
-        uartclken   <=  clkdiv == 2'b00;
-     end
-   assign wegate = 1'b1;
+   reg clk = 1'b0;  // divider
+
+
+   reg cpuclken_old = 0;
+   wire cpuclken;
+
+
+   reg [1:0] clkdiv = 2'b00;
 
    always @(posedge clk100)
      begin
-          sw4_sync <= sw4;
+        clkdiv = clkdiv + 1;
+        clk = clkdiv[0];
      end
+   assign wegate = 1'b1;
+
+   always @(posedge clk)
+     begin
+          sw4_sync <= sw4;
+          cpuclken_old <= cpuclken;
+     end
+
+   assign cpuclken = !reset_b | !cpuclken_old | !(vda | vpa);
 
    assign reset_b = sw4_sync;
 
@@ -113,7 +113,7 @@ module system (
    opc7cpu inst_cpu
      (
       .din(cpu_din),
-      .clk(clk100),
+      .clk(clk),
       .reset_b(reset_b),
       .int_b(2'b11),
       .clken(cpuclken),
@@ -132,9 +132,8 @@ module system (
       .dout(ram_dout),
       .address(address[RAMSIZE-1:0]),
       .rnw(rnw),
-      .clk(!clk100),
-//      .clk(clk100),      
-      .cs(ram_cs & ramclken)
+      .clk(clk),
+      .cs(ram_cs)
       );
 
    // A simple 115200 baud UART
@@ -144,8 +143,8 @@ module system (
       .dout(uart_dout),
       .a0(address[0]),
       .rnw(rnw),
-      .clk(clk100),
-      .clken(uartclken),
+      .clk(clk),
+      .clken(1'b1),
       .reset_b(reset_b),
       .cs_b(uart_cs_b),
       .rxd(rxd),
